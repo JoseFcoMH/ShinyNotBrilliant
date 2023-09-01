@@ -66,11 +66,12 @@ ui <- fluidPage(
         # Downloads
         downloadButton('postPlotImg', 'Download High-Res image'),
         downloadButton('postPlotDtf', 'Download processed data (.csv format)'),
-        downloadButton('postPlotExcel', 'Download processed data (ready to GraphPad Prism copy-paste, .xlsx)'),
+        downloadButton('postPlotExcel', 'Download processed data (ready for GraphPad Prism copy-paste, .xlsx)'),
         downloadButton('postPlotPrism', 'Download processed data (.pzfx) (Not recommended, slow)'),
         
         # Poly/Mono ratios
-        DTOutput('PMtable'),
+        fluidRow(column(width = 6, DTOutput('PMtable')),
+                 column(width = 6, plotOutput('PMChart'))),
         downloadButton('PMcalcs', 'Download PM ratio table'),
       )
     )
@@ -171,7 +172,7 @@ server <- function(input, output) {
     PMrat <- reactive(lapply(profils2(), PolyMonoRatio, mono_start = input$MonosomeStart, mono_end = input$MonosomeEnd, poly_start = input$PolysomeStart, poly_end = input$PolysomeEnd))
     
     PMtab <- reactive({
-      pmt <- tibble(unique(rbindlist(profils2())$Sample_ID), unlist(PMrat()))    
+      pmt <- tibble(unique(rbindlist(profils2())$Sample_ID), round(unlist(PMrat()), digits = 2))    
       colnames(pmt) = c('ID', 'Poly/Mono ratio')
       pmt
       })
@@ -184,6 +185,10 @@ server <- function(input, output) {
                                                          file)
                                             }
     )
+    
+    output$PMChart <- renderPlot(ggplot(PMtab(), aes(x = ID, y = `Poly/Mono ratio`)) +
+                                   geom_col(fill = 'grey50', color = 'grey1') +
+                                   theme_bw())
 }
 
 # Run the application 
