@@ -4,12 +4,30 @@
 #
 
 
-lapply(c('shiny', 'DT', 'tidyverse', 'ggthemes', 'pracma', 'ggprism', 'data.table', 'polyprof', 'readxl', 'pzfx', 'openxlsx'), require, character.only = TRUE)
+#lapply(c('shiny', 'DT', 'tidyverse', 'ggthemes', 'pracma', 'ggprism', 'data.table', 'polyprof', 'readxl', 'pzfx', 'openxlsx'), library, character.only = TRUE)
+
+library(shiny)
+library(DT)
+library(tidyverse)
+library(ggthemes)
+library(pracma)
+library(ggprism)
+library(data.table)
+library(polyprof)
+library(readxl)
+library(openxlsx)
+library(pzfx)
+
 
 norm_methods <- c('None', 'AUC', 'AUC_Rib', '80S')
 
 IDer <- function(da, iden=c()){
+          if(typeof(iden) != 'character') {
+            iden=c()
+          }
+  
           iden = unlist(str_split(iden, ','))
+          
           if(length(iden) == nrow(da)){
             mer <- da %>% mutate(Sample_ID = iden)
           } else {
@@ -26,7 +44,8 @@ ui <- fluidPage(
     
     # Upload files
     fileInput('profiles', 'Upload .csv files straight from the Biocomp fractionator here', multiple = TRUE, accept = c('.csv')),
-    textInput('IDs', 'Enter your data labels separated by a comma (,)', placeholder = '1,abc,s 1,'),
+    textInput('IDs', 'Enter your data labels separated by a comma (,)', placeholder = '1,abc,s 1,', value = '1,2,3,4,5,6'),
+    actionButton('labs', 'Update labels'),
     DTOutput('files'),
 
     # Layout
@@ -37,6 +56,7 @@ ui <- fluidPage(
                    
         # Sliders for peak selection
         checkboxInput('cutoffsP', 'Show cutoffs for peak selection in Raw plot', value = FALSE),
+        numericInput('npeaks', 'Number of peaks to use when aligning', value = 1),
         sliderInput('PeakStart', label = 'Aligning peak search - start', value = 35, min = 6, max = 66),
         sliderInput('PeakEnd', label = 'Aligning peak search - end', value = 46, min = 6, max = 66),
         
@@ -80,9 +100,15 @@ ui <- fluidPage(
 # Server serving
 server <- function(input, output) {
   
+    new_labs <- eventReactive({
+      input$labs
+      input$profiles},{
+      input$IDs
+    }) # Try suspended = FALSE and remove input$profiles if this doesn't work
+  
     ftable <- reactive({ 
       req(input$profiles)
-      IDer(input$profiles, input$IDs)
+      IDer(input$profiles, new_labs())
     })
   
     output$files <- renderDT(select(ftable(), name, Sample_ID), editable = FALSE)
@@ -100,7 +126,7 @@ server <- function(input, output) {
     })
     
     profils2 <- reactive({
-      temp <- lapply(profils1(), align, ref = profils1()[[1]], by_peaks = TRUE, npeaks = 1, minPeakPos = input$PeakStart, maxPeakPos = input$PeakEnd)
+      temp <- lapply(profils1(), align, ref = profils1()[[1]], by_peaks = TRUE, npeaks = input$npeaks, minPeakPos = input$PeakStart, maxPeakPos = input$PeakEnd)
       temp <- lapply(temp, normalize, to = input$norm, max_abs = input$maxAbs, max_jump = 0.5, pos_start = 10, pos_end = 70, smoothen = input$smoothen, zero_baseline = input$zbaseline)
       return(temp)
     })

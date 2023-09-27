@@ -1,0 +1,10 @@
+name: polyapp
+title:
+username: josefcomh
+account: josefcomh
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9739702
+bundleId: 7634527
+url: https://josefcomh.shinyapps.io/polyapp/
+version: 1
